@@ -1,0 +1,2 @@
+[12-Jul-2025 16:15:24 Asia/Colombo] PHP Fatal error:  Cannot redeclare installment() (previously declared in /home/kiria/andrew/Modules/Installment/Helpers/general_helper.php:2) in /home/kiria/andrew/Modules/Installment/Helpers/general_helper.php on line 2
+[14-Jul-2025 03:11:55 Asia/Colombo] PHP Fatal error:  Cannot redeclare installment() (previously declared in /home/kiria/andrew/Modules/Installment/Helpers/general_helper.php:2) in /home/kiria/andrew/Modules/Installment/Helpers/general_helper.php on line 2
