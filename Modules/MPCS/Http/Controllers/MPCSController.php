@@ -40,6 +40,7 @@ use Modules\MPCS\Entities\FormF17HeaderController;
 use Modules\MPCS\Entities\Mpcs9cCashFormSettings;
 use Modules\MPCS\Entities\Mpcs9cCreditFormSettings;
 use Modules\MPCS\Entities\Mpcs9aFormTextDetail;
+use DateTime;
 
 class MPCSController extends Controller
 {
@@ -70,7 +71,7 @@ class MPCSController extends Controller
         } else {
             $F15a9ab_from_no = 1;
         }
-        
+
         $business_location_name = BusinessLocation::where('business_id', $business_id)->pluck('name')->first();
         $ref_pre_form_number = Mpcs9cCashFormSettings::where('business_id', $business_id)->orderBy('id', 'desc')->first();
         if (!empty($ref_pre_form_number)) {
@@ -178,7 +179,7 @@ class MPCSController extends Controller
 
         $form_9a_no = Mpcs9cCashFormSettings::where('business_id', $business_id)->orderBy('id', 'desc')->value('starting_number') ?? 1;
         $form_9a_no += $total_days;
-        
+
         return view('mpcs::forms.form_9c')->with(compact('business_locations', 'business_location_name', 'form_9a_no', 'total_days'));
     }
 
@@ -204,101 +205,101 @@ class MPCSController extends Controller
 
         return view('mpcs::forms.form_9ccr')->with(compact('business_locations', 'business_location_name', 'form_9a_no', 'setting', 'business', 'default_business_location', 'currency_precision'));
     }
-/**
+    /**
      * Show the form for getFrom20
      * @return Response
      */
-   public function get9AForm(Request $request)
-{
-    $business_id = request()->session()->get('business.id');
-    $business_details = Business::find($business_id);
-    $currency_precision = (int) $business_details->currency_precision;
-    
-    $start_date = $request->start_date;
-    $end_date = $request->end_date;
-    $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
-    
-$textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
-    
-    // Get card sales
-    $card_sale = DB::table('transactions')
-        ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-        ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')              
-        ->where('transactions.type', 'sell')
-        ->where('transactions.is_credit_sale', 0)
-        ->where('transaction_payments.method', "card")
-        ->whereDate('transactions.transaction_date', '>=', $start_date)
-        ->whereDate('transactions.transaction_date', '<=', $end_date)              
-        ->select(DB::raw('SUM(transaction_payments.amount) as total_sales'))
-        ->first();
-    
-    // Get cash sales
-    $cash_sale = DB::table('transactions')
-        ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-        ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')              
-        ->where('transactions.type', 'sell')
-        ->where('transactions.is_credit_sale', 0)
-        ->where('transaction_payments.method', "cash")
-        ->whereDate('transactions.transaction_date', '>=', $start_date)
-        ->whereDate('transactions.transaction_date', '<=', $end_date)              
-        ->select(DB::raw('SUM(transaction_payments.amount) as total_sales'))
-        ->first();
-    
-    // Get credit sales
-    $credit_sale = DB::table('transactions')
-        ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-        ->where('transactions.is_credit_sale', 1) 
-        ->whereDate('transactions.transaction_date', '>=', $start_date)
-        ->whereDate('transactions.transaction_date', '<=', $end_date)
-        ->select(DB::raw('SUM(transaction_sell_lines.quantity * transaction_sell_lines.unit_price) as total_sales'))
-        ->first();
-    
-    // Get previous day sales if form F22 doesn't exist
-    $previous_total_sum = 0;
-    $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
-    
-    if (!$formF22Exists) {
-        $previous_total = DB::table('transactions')
+    public function get9AForm(Request $request)
+    {
+        $business_id = request()->session()->get('business.id');
+        $business_details = Business::find($business_id);
+        $currency_precision = (int) $business_details->currency_precision;
+
+        $start_date = $request->start_date;
+        $end_date = $request->end_date;
+        $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
+
+        $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
+
+        // Get card sales
+        $card_sale = DB::table('transactions')
             ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-            ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
-            ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
             ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-            ->where('account_transactions.business_id', $business_id)                  
-            ->whereDate('transactions.transaction_date', '=', $previous_day)
-            ->select('transactions.final_total as final_total_rs')
-            ->get();
-        
-        $previous_total_sum = $previous_total->sum('final_total_rs');
+            ->where('transactions.type', 'sell')
+            ->where('transactions.is_credit_sale', 0)
+            ->where('transaction_payments.method', "card")
+            ->whereDate('transactions.transaction_date', '>=', $start_date)
+            ->whereDate('transactions.transaction_date', '<=', $end_date)
+            ->select(DB::raw('SUM(transaction_payments.amount) as total_sales'))
+            ->first();
+
+        // Get cash sales
+        $cash_sale = DB::table('transactions')
+            ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+            ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+            ->where('transactions.type', 'sell')
+            ->where('transactions.is_credit_sale', 0)
+            ->where('transaction_payments.method', "cash")
+            ->whereDate('transactions.transaction_date', '>=', $start_date)
+            ->whereDate('transactions.transaction_date', '<=', $end_date)
+            ->select(DB::raw('SUM(transaction_payments.amount) as total_sales'))
+            ->first();
+
+        // Get credit sales
+        $credit_sale = DB::table('transactions')
+            ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+            ->where('transactions.is_credit_sale', 1)
+            ->whereDate('transactions.transaction_date', '>=', $start_date)
+            ->whereDate('transactions.transaction_date', '<=', $end_date)
+            ->select(DB::raw('SUM(transaction_sell_lines.quantity * transaction_sell_lines.unit_price) as total_sales'))
+            ->first();
+
+        // Get previous day sales if form F22 doesn't exist
+        $previous_total_sum = 0;
+        $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
+
+        if (!$formF22Exists) {
+            $previous_total = DB::table('transactions')
+                ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+                ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
+                ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
+                ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+                ->where('account_transactions.business_id', $business_id)
+                ->whereDate('transactions.transaction_date', '=', $previous_day)
+                ->select('transactions.final_total as final_total_rs')
+                ->get();
+
+            $previous_total_sum = $previous_total->sum('final_total_rs');
+        }
+
+        // Format amounts into rupees and cents
+        $formatAmount = function ($amount) use ($currency_precision) {
+            $amount = (float)($amount ?? 0);
+            $rup = (int) $amount;
+            $cent = round(($amount - floor($amount)) * 100);
+            $cent = str_pad($cent, $currency_precision, '0', STR_PAD_LEFT);
+
+            return ['rup' => $rup, 'cent' => $cent];
+        };
+
+        $cash_sales = $formatAmount($cash_sale->total_sales ?? 0);
+        $card_sales = $formatAmount($card_sale->total_sales ?? 0);
+        $credit_sales = $formatAmount($credit_sale->total_sales ?? 0);
+        $previous_sales = $formatAmount($previous_total_sum);
+
+        return response()->json([
+            "credit_sales_rup" => $credit_sales['rup'],
+            "credit_sales_cent" => $credit_sales['cent'],
+            "cash_sales_rup" => $cash_sales['rup'],
+            "cash_sales_cent" => $cash_sales['cent'],
+            "card_sales_rup" => $card_sales['rup'],
+            "card_sales_cent" => $card_sales['cent'],
+            "previous_sales_rup" => $previous_sales['rup'],
+            "previous_sales_cent" => $previous_sales['cent'],
+            'currency_precision' => $currency_precision,
+            'text_details' => $textDetails
+        ]);
     }
-    
-    // Format amounts into rupees and cents
-    $formatAmount = function($amount) use ($currency_precision) {
-        $amount = (float)($amount ?? 0);
-        $rup = (int) $amount;
-        $cent = round(($amount - floor($amount)) * 100);
-        $cent = str_pad($cent, $currency_precision, '0', STR_PAD_LEFT);
-        
-        return ['rup' => $rup, 'cent' => $cent];
-    };
-    
-    $cash_sales = $formatAmount($cash_sale->total_sales ?? 0);
-    $card_sales = $formatAmount($card_sale->total_sales ?? 0);
-    $credit_sales = $formatAmount($credit_sale->total_sales ?? 0);
-    $previous_sales = $formatAmount($previous_total_sum);
-    
-    return response()->json([
-        "credit_sales_rup" => $credit_sales['rup'], 
-        "credit_sales_cent" => $credit_sales['cent'], 
-        "cash_sales_rup" => $cash_sales['rup'],
-        "cash_sales_cent" => $cash_sales['cent'],
-        "card_sales_rup" => $card_sales['rup'], 
-        "card_sales_cent" => $card_sales['cent'],  
-        "previous_sales_rup" => $previous_sales['rup'], 
-        "previous_sales_cent" => $previous_sales['cent'],          
-        'currency_precision' => $currency_precision,
-        'text_details' => $textDetails
-    ]);
-}
     /**
      * Show the form for getFrom20
      * @return Response
@@ -316,26 +317,25 @@ $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '
             $start_date = $request->start_date;
             $end_date = $request->end_date;
             $cash_sales_today = DB::table('transactions')
-            ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-            ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')          
-            ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
-            ->where('account_transactions.business_id', $business_id)
-            ->where('account_transactions.type', 'debit')
-            ->whereNull('transactions.customer_group_id')           
-            ->whereDate('transactions.transaction_date', '>=', $start_today_date)
-            ->whereDate('transactions.transaction_date', '<=', $end_today_date)
-            ->groupBy('categories.id', 'categories.name')
-            ->select(
-                'products.name as product',
-                'transactions.invoice_no as billno',              
-                DB::raw('SUM(transaction_sell_lines.quantity) as total_quantity'),
-                DB::raw('SUM(transaction_sell_lines.quantity * transaction_sell_lines.unit_price) as total_sales')
-            )
-            ->get(); 
+                ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+                ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
+                ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
+                ->where('account_transactions.business_id', $business_id)
+                ->where('account_transactions.type', 'debit')
+                ->whereNull('transactions.customer_group_id')
+                ->whereDate('transactions.transaction_date', '>=', $start_today_date)
+                ->whereDate('transactions.transaction_date', '<=', $end_today_date)
+                ->groupBy('categories.id', 'categories.name')
+                ->select(
+                    'products.name as product',
+                    'transactions.invoice_no as billno',
+                    DB::raw('SUM(transaction_sell_lines.quantity) as total_quantity'),
+                    DB::raw('SUM(transaction_sell_lines.quantity * transaction_sell_lines.unit_price) as total_sales')
+                )
+                ->get();
             return Datatables::of($cash_sales_today)
-           
-            ->make(true);
-        
+
+                ->make(true);
         }
     }
 
@@ -522,7 +522,7 @@ $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '
 
     public function get16AForm(Request $request)
     {
-        // dd($request->start_date);
+
         $business_id = request()->session()->get('user.business_id');
         $start_date = $request->start_date;
         $end_date = $request->end_date;
@@ -531,101 +531,111 @@ $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '
         $currency_precision = (int) $business_details->currency_precision;
         $qty_precision = (int) $business_details->quantity_precision;
 
-        if (request()->ajax()) {            
-      
+        if (request()->ajax()) {
+
             $purchases = $this->F16AQuery($business_id, $start_date, $end_date, $location_id);
             $rows = [];
-        //     if (auth()->check() && auth()->user()->can('user'))
-        //     $setting = Mpcs21cFormSettings::where('date', $start_date)->first();
-        // else 
+            //     if (auth()->check() && auth()->user()->can('user'))
+            //     $setting = Mpcs21cFormSettings::where('date', $start_date)->first();
+            // else 
             $setting = Mpcs21cFormSettings::first();
-    //   dd($setting);
-        $form_number_21 = optional($setting)->ref_pre_form_number ? $setting->ref_pre_form_number : "";
-           foreach ($purchases->get() as $purchaseDet) {
-    $purchase = Transaction::where('business_id', $business_id)
-        ->where('id', $purchaseDet->id)
-        ->withTrashed()
-        ->with(['contact', 'purchase_lines', 'purchase_lines.product', 'purchase_lines.product.unit', 
-               'purchase_lines.variations', 'purchase_lines.variations.product_variation', 
-               'purchase_lines.sub_unit', 'location', 'purchase_lines.product.category'])
-        ->first();
-    
-    \Log::info('Purchase Details:', ['purchase' => $purchase->purchase_lines->toArray()]);
-    
-    if ($purchase) {
-        foreach ($purchase->purchase_lines as $line) {
-            // Add null checks for variations
-            $dpp_inc_tax = optional($line->variations)->dpp_inc_tax ?? 0;
-            $sell_price_inc_tax = optional($line->variations)->sell_price_inc_tax ?? 0;
-            
-            $rows[] = [
-                'index_no' => $purchase->order_no,
-                'reference_no' => $purchase->ref_no ?? '-',
-                'invoice_no' => $purchase->invoice_no ?? '-',
-                'product' => optional($line->product)->name,
-                'location' => optional($purchase->location)->name,
-                'received_qty' => number_format($line->quantity, $qty_precision),
-                'unit_purchase_price' => number_format($dpp_inc_tax, $currency_precision),
-                'total_purchase_price' => '<span class="display_currency total_purchase_price" data-orig-value="' . 
-                    ($dpp_inc_tax * $line->quantity) . '" data-currency_symbol = false>' . 
-                    number_format($dpp_inc_tax * $line->quantity, $currency_precision) . '</span>',
-                'unit_sale_price' => number_format($sell_price_inc_tax, $currency_precision),
-                'total_sale_price' => '<span class="display_currency total_sale_price" data-orig-value="' . 
-                    ($sell_price_inc_tax * $line->quantity) . '" data-currency_symbol = false>' . 
-                    number_format($sell_price_inc_tax * $line->quantity, $currency_precision) . '</span>',
+            //   dd($setting);
+            $form_number_21 = optional($setting)->ref_pre_form_number ? $setting->ref_pre_form_number : "";
+            foreach ($purchases->get() as $purchaseDet) {    
+               
+                $purchase = Transaction::where('business_id', $business_id)
+                    ->where('id', $purchaseDet->id)
+                    ->withTrashed()
+                    ->with([
+                        'contact',
+                        'purchase_lines',
+                        'purchase_lines.product',
+                        'purchase_lines.product.unit',
+                        'purchase_lines.variations',
+                        'purchase_lines.variations.product_variation',
+                        'purchase_lines.sub_unit',
+                        'location',
+                        'purchase_lines.product.category'
+                    ])
+                    ->first();
+               
+                // \Log::info('Purchase Details:', ['purchase' => $purchase->purchase_lines->toArray()]);
+          
+                if ($purchase) {
+                    foreach ($purchase->purchase_lines as $line) {
+                        // Add null checks for variations
+                       
+                        $dpp_inc_tax = optional($line->variations)->dpp_inc_tax ?? 0;
+                        $sell_price_inc_tax = optional($line->variations)->sell_price_inc_tax ?? 0;
+                        
+                        $rows[] = [
+                            'index_no' => $purchase->order_no,
+                            'reference_no' => $purchase->ref_no ?? '-',
+                            'invoice_no' => $purchase->invoice_no ?? '-',
+                            'product' => optional($line->product)->name,
+                            'location' => optional($purchase->location)->name,
+                            'received_qty' => number_format($line->quantity, $qty_precision),
+                            'unit_purchase_price' => number_format($dpp_inc_tax, $currency_precision),
+                            'total_purchase_price' => '<span class="display_currency total_purchase_price" data-orig-value="' .
+                                ($dpp_inc_tax * $line->quantity) . '" data-currency_symbol = false>' .
+                                number_format($dpp_inc_tax * $line->quantity, $currency_precision) . '</span>',
+                            'unit_sale_price' => number_format($sell_price_inc_tax, $currency_precision),
+                            'total_sale_price' => '<span class="display_currency total_sale_price" data-orig-value="' .
+                                ($sell_price_inc_tax * $line->quantity) . '" data-currency_symbol = false>' .
+                                number_format($sell_price_inc_tax * $line->quantity, $currency_precision) . '</span>',
 
-                'stock_book_no' => $form_number_21 ?? '',
-            ];
-        }
-    }
-}
-//             $data=$rows->toArray();
-// \Log::info("F16 settings{$data}");
+                            'stock_book_no' => $form_number_21 ?? '',
+                        ];
+                    }
+                }
+            }
+            //             $data=$rows->toArray();
+            // \Log::info("F16 settings{$data}");
             return Datatables::of(collect($rows))
                 ->rawColumns(['total_purchase_price', 'total_sale_price'])
                 ->make(true);
         }
     }
-///get 9 c cash
-public function get9CCashForm(Request $request)
-{
-    try {
-     
-        $business_id = $request->session()->get('user.business_id');
-        $business_details = Business::find($business_id);
-        $currency_precision = (int) $business_details->currency_precision;
-        if ($request->ajax()) {
+    ///get 9 c cash
+    public function get9CCashForm(Request $request)
+    {
+        try {
+
             $business_id = $request->session()->get('user.business_id');
             $business_details = Business::find($business_id);
             $currency_precision = (int) $business_details->currency_precision;
-            $qty_precision = (int) $business_details->quantity_precision;
-            $start_date = Carbon::parse($request->start_date)->format('Y-m-d');
-            $end_date = Carbon::parse($request->end_date)->format('Y-m-d');
-             
-            $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
-            
-            $cash_sales_today = DB::table('transactions')
-                ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-                ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
-                ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
-                ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-                ->where('account_transactions.business_id', $business_id)
-                ->where('transactions.is_credit_sale', 0)
-                ->whereDate('transactions.transaction_date', '>=', $start_date)
-                ->whereDate('transactions.transaction_date', '<=', $end_date)
-                ->select(
-                    'products.name as product',
-                    'transactions.invoice_no as billno',
-                    'transaction_sell_lines.quantity as quantity',
-                    'transactions.final_total as final_total_rs'
-                )
-                ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
-                ->get();
+            if ($request->ajax()) {
+                $business_id = $request->session()->get('user.business_id');
+                $business_details = Business::find($business_id);
+                $currency_precision = (int) $business_details->currency_precision;
+                $qty_precision = (int) $business_details->quantity_precision;
+                $start_date = Carbon::parse($request->start_date)->format('Y-m-d');
+                $end_date = Carbon::parse($request->end_date)->format('Y-m-d');
+
+                $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
+
+                $cash_sales_today = DB::table('transactions')
+                    ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+                    ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
+                    ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
+                    ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+                    ->where('account_transactions.business_id', $business_id)
+                    ->where('transactions.is_credit_sale', 0)
+                    ->whereDate('transactions.transaction_date', '>=', $start_date)
+                    ->whereDate('transactions.transaction_date', '<=', $end_date)
+                    ->select(
+                        'products.name as product',
+                        'transactions.invoice_no as billno',
+                        'transaction_sell_lines.quantity as quantity',
+                        'transactions.final_total as final_total_rs'
+                    )
+                    ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
+                    ->get();
                 // Check if FormF22Header exists for the given start date
                 $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
                 $header = Mpcs21cFormSettings::orderBy('created_at', 'desc')
-                ->get();
-               $previous_totals=[];
+                    ->get();
+                $previous_totals = [];
                 if ($formF22Exists) {
                     $previous_total = 0;
                 } else {
@@ -646,121 +656,119 @@ public function get9CCashForm(Request $request)
                         )
                         ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
                         ->get();
-                
-                        $previous_totals=$previous_total->sum('final_total_rs');
+
+                    $previous_totals = $previous_total->sum('final_total_rs');
                 }
-             
+
                 \Log::info('get9CCashForm called', [
                     'business_id' => $business_id,
-                    'prev' =>$previous_day,
+                    'prev' => $previous_day,
                     'data' => $previous_totals,
-                     
-                ]);
-            return Datatables::of($cash_sales_today)
-            ->removeColumn('id')
-            ->with([
-                'previous_total' => [
-                    'rs' => (int) $previous_totals,
-                    'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
-                ]
-            ])
-            ->addColumn('page', fn () => '')
 
-            ->editColumn('quantity', function ($row) use($qty_precision){
-                return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
-            })
-            // Split final_total into Rs and Cents
-            ->editColumn('final_total_rs', function ($row) {
-                $amount = (float) $row->final_total_rs;
-                return (int) $amount;
-            })
-            ->addColumn('final_total_cent', function ($row) use($currency_precision){
-                $amount = (float) $row->final_total_rs;
-                $decimal = round(($amount - floor($amount)) * 100);
-                return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
-            })
-        
-            // Optional: You can handle other columns similarly if needed
-            ->addColumn('goods_rs', fn () => '')
-            ->addColumn('goods_cent', fn () => '')
-            ->addColumn('loading_rs', fn () => '')
-            ->addColumn('loading_cent', fn () => '')
-            ->addColumn('empty_rs', fn () => '')
-            ->addColumn('empty_cent', fn () => '')
-            ->addColumn('transport_rs', fn () => '')
-            ->addColumn('transport_cent', fn () => '')
-            ->addColumn('other_rs', fn () => '')
-            ->addColumn('other_cent', fn () => '')
-            ->make(true);
-            
+                ]);
+                return Datatables::of($cash_sales_today)
+                    ->removeColumn('id')
+                    ->with([
+                        'previous_total' => [
+                            'rs' => (int) $previous_totals,
+                            'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
+                        ]
+                    ])
+                    ->addColumn('page', fn() => '')
+
+                    ->editColumn('quantity', function ($row) use ($qty_precision) {
+                        return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
+                    })
+                    // Split final_total into Rs and Cents
+                    ->editColumn('final_total_rs', function ($row) {
+                        $amount = (float) $row->final_total_rs;
+                        return (int) $amount;
+                    })
+                    ->addColumn('final_total_cent', function ($row) use ($currency_precision) {
+                        $amount = (float) $row->final_total_rs;
+                        $decimal = round(($amount - floor($amount)) * 100);
+                        return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
+                    })
+
+                    // Optional: You can handle other columns similarly if needed
+                    ->addColumn('goods_rs', fn() => '')
+                    ->addColumn('goods_cent', fn() => '')
+                    ->addColumn('loading_rs', fn() => '')
+                    ->addColumn('loading_cent', fn() => '')
+                    ->addColumn('empty_rs', fn() => '')
+                    ->addColumn('empty_cent', fn() => '')
+                    ->addColumn('transport_rs', fn() => '')
+                    ->addColumn('transport_cent', fn() => '')
+                    ->addColumn('other_rs', fn() => '')
+                    ->addColumn('other_cent', fn() => '')
+                    ->make(true);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error in get9CCashForm', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+            ]);
+            return response()->json(['error' => 'An error occurred while processing the request.'], 500);
         }
-        
-    } catch (\Exception $e) {
-        \Log::error('Error in get9CCashForm', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-            'request_data' => $request->all(),
-        ]);
-        return response()->json(['error' => 'An error occurred while processing the request.'], 500);
     }
-}
-///get 9 c cash
-public function get9CCreditForm(Request $request)
-{
-    try {
-     
-        $business_id = $request->session()->get('user.business_id');
-        $business_details = Business::find($business_id);
-        $currency_precision = (int) $business_details->currency_precision;
-        $setting = Mpcs9cCreditFormSettings::where('business_id', $business_id)
-                            ->orderBy('id', 'desc')
-                            ->first();
-        if ($setting) {
-            $setting_start_date = Carbon::parse($setting->date_time)->format('Y-m-d');
-            $starting_number= $setting->starting_number;
-        }else{
-            $setting_start_date = null;
-            $starting_number = null;
-        }
-        if ($request->ajax()) {
+    ///get 9 c cash
+    public function get9CCreditForm(Request $request)
+    {
+        try {
+
             $business_id = $request->session()->get('user.business_id');
             $business_details = Business::find($business_id);
             $currency_precision = (int) $business_details->currency_precision;
-            $qty_precision = (int) $business_details->quantity_precision;
-            $start_date = Carbon::parse($request->start_date)->format('Y-m-d');
-            $end_date = Carbon::parse($request->end_date)->format('Y-m-d');
-             
-            $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
-            
-            if($setting_start_date && $setting_start_date <= $start_date){
-                // Get cash sales
-               $cash_sales_today = DB::table('transactions')
-                    ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-                    ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
-                    ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
-                    ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-                    ->where('account_transactions.business_id', $business_id)
-                    ->where('transactions.is_credit_sale', 0)
-                    ->whereDate('transactions.transaction_date', '>=', $start_date)
-                    ->whereDate('transactions.transaction_date', '<=', $end_date)
-                    ->select(
-                        'products.name as product',
-                        'transactions.invoice_no as billno',
-                        'transaction_sell_lines.quantity as quantity',
-                        'transactions.final_total as final_total_rs'
-                    )
-                    ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
-                    ->get(); 
-            }else{
-                $cash_sales_today = collect();
+            $setting = Mpcs9cCreditFormSettings::where('business_id', $business_id)
+                ->orderBy('id', 'desc')
+                ->first();
+            if ($setting) {
+                $setting_start_date = Carbon::parse($setting->date_time)->format('Y-m-d');
+                $starting_number = $setting->starting_number;
+            } else {
+                $setting_start_date = null;
+                $starting_number = null;
             }
-            
+            if ($request->ajax()) {
+                $business_id = $request->session()->get('user.business_id');
+                $business_details = Business::find($business_id);
+                $currency_precision = (int) $business_details->currency_precision;
+                $qty_precision = (int) $business_details->quantity_precision;
+                $start_date = Carbon::parse($request->start_date)->format('Y-m-d');
+                $end_date = Carbon::parse($request->end_date)->format('Y-m-d');
+
+                $previous_day = Carbon::parse($request->start_date)->subDay(1)->format('Y-m-d');
+
+                if ($setting_start_date && $setting_start_date <= $start_date) {
+                    // Get cash sales
+                    $cash_sales_today = DB::table('transactions')
+                        ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+                        ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
+                        ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
+                        ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+                        ->where('account_transactions.business_id', $business_id)
+                        ->where('transactions.is_credit_sale', 0)
+                        ->whereDate('transactions.transaction_date', '>=', $start_date)
+                        ->whereDate('transactions.transaction_date', '<=', $end_date)
+                        ->select(
+                            'products.name as product',
+                            'transactions.invoice_no as billno',
+                            'transaction_sell_lines.quantity as quantity',
+                            'transactions.final_total as final_total_rs'
+                        )
+                        ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
+                        ->get();
+                } else {
+                    $cash_sales_today = collect();
+                }
+
                 // Check if FormF22Header exists for the given start date
                 $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
-                
-               $previous_totals=0;
-               $previous_total = 0;
-               if(!$formF22Exists && $setting){
+
+                $previous_totals = 0;
+                $previous_total = 0;
+                if (!$formF22Exists && $setting) {
                     $previous_total = DB::table('transactions')
                         ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
                         ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
@@ -778,13 +786,13 @@ public function get9CCreditForm(Request $request)
                         )
                         ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
                         ->get();
-                
-                        $previous_totals=$previous_total->sum('final_total_rs')+$setting->ref_pre_form_number; 
-               }
+
+                    $previous_totals = $previous_total->sum('final_total_rs') + $setting->ref_pre_form_number;
+                }
 
                 $form_9ccr_no = 0;
                 if ($setting) {
-                    
+
                     $uniqueTransactionDatesCount = DB::table('transactions')
                         ->where('business_id', $business_id)
                         ->where('is_credit_sale', 0)
@@ -794,78 +802,77 @@ public function get9CCreditForm(Request $request)
                         ->count(DB::raw('DATE(transaction_date)'));
                     $form_9ccr_no = $uniqueTransactionDatesCount + $starting_number;
                 }
-                
+
                 \Log::info('get9CCashForm called', [
                     'business_id' => $business_id,
-                    'prev' =>$previous_day,
+                    'prev' => $previous_day,
                     'data' => $previous_totals,
-                     
+
                 ]);
-            $custom_message = null;
-            if(!$setting){
-                $custom_message = "Please set the Form 9C Credit Setting.";
-                $form_9ccr_no = 0;
-                $previous_totals = 0;
-            }else if($setting_start_date > $start_date){
-                $custom_message = "Please select a date on or after the Form 9C Credit Setting opening date.";
-                $form_9ccr_no = 0;
-                $previous_totals = 0;
+                $custom_message = null;
+                if (!$setting) {
+                    $custom_message = "Please set the Form 9C Credit Setting.";
+                    $form_9ccr_no = 0;
+                    $previous_totals = 0;
+                } else if ($setting_start_date > $start_date) {
+                    $custom_message = "Please select a date on or after the Form 9C Credit Setting opening date.";
+                    $form_9ccr_no = 0;
+                    $previous_totals = 0;
+                }
+
+                return Datatables::of($cash_sales_today)
+                    ->removeColumn('id')
+                    ->with([
+                        'previous_total' => [
+                            'rs' => $previous_totals,
+                            'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
+                        ],
+                        'form_9ccr_no' => $form_9ccr_no,
+                        'custom_message' => $custom_message
+                    ])
+                    ->addColumn('page', fn() => '')
+
+                    ->editColumn('quantity', function ($row) use ($qty_precision) {
+                        return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
+                    })
+                    // Split final_total into Rs and Cents
+                    ->editColumn('final_total_rs', function ($row) {
+                        $amount = (float) $row->final_total_rs;
+                        return (int) $amount;
+                    })
+                    ->addColumn('final_total_cent', function ($row) use ($currency_precision) {
+                        $amount = (float) $row->final_total_rs;
+                        $decimal = round(($amount - floor($amount)) * 100);
+                        return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
+                    })
+
+                    // Optional: You can handle other columns similarly if needed
+                    ->addColumn('goods_rs', fn() => '')
+                    ->addColumn('goods_cent', fn() => '')
+                    ->addColumn('loading_rs', fn() => '')
+                    ->addColumn('loading_cent', fn() => '')
+                    ->addColumn('empty_rs', fn() => '')
+                    ->addColumn('empty_cent', fn() => '')
+                    ->addColumn('transport_rs', fn() => '')
+                    ->addColumn('transport_cent', fn() => '')
+                    ->addColumn('other_rs', fn() => '')
+                    ->addColumn('other_cent', fn() => '')
+                    ->make(true);
             }
-
-            return Datatables::of($cash_sales_today)
-            ->removeColumn('id')
-            ->with([
-                'previous_total' => [
-                    'rs' => $previous_totals,
-                    'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
-                ],
-                'form_9ccr_no' => $form_9ccr_no,
-                'custom_message' => $custom_message
-            ])
-            ->addColumn('page', fn () => '')
-
-            ->editColumn('quantity', function ($row) use($qty_precision){
-                return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
-            })
-            // Split final_total into Rs and Cents
-            ->editColumn('final_total_rs', function ($row) {
-                $amount = (float) $row->final_total_rs;
-                return (int) $amount;
-            })
-            ->addColumn('final_total_cent', function ($row) use($currency_precision){
-                $amount = (float) $row->final_total_rs;
-                $decimal = round(($amount - floor($amount)) * 100);
-                return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
-            })
-        
-            // Optional: You can handle other columns similarly if needed
-            ->addColumn('goods_rs', fn () => '')
-            ->addColumn('goods_cent', fn () => '')
-            ->addColumn('loading_rs', fn () => '')
-            ->addColumn('loading_cent', fn () => '')
-            ->addColumn('empty_rs', fn () => '')
-            ->addColumn('empty_cent', fn () => '')
-            ->addColumn('transport_rs', fn () => '')
-            ->addColumn('transport_cent', fn () => '')
-            ->addColumn('other_rs', fn () => '')
-            ->addColumn('other_cent', fn () => '')
-            ->make(true);
-            
+        } catch (\Exception $e) {
+            \Log::error('Error in get9CCashForm', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+            ]);
+            return response()->json(['error' => $e], 500);
         }
-        
-    } catch (\Exception $e) {
-        \Log::error('Error in get9CCashForm', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-            'request_data' => $request->all(),
-        ]);
-        return response()->json(['error' => $e], 500);
     }
-}
     public function F16AQuery($business_id, $start_date, $end_date, $location_id)
     {
+       
         $purchases = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
-            ->join('business_locations AS BS', 'transactions.location_id', '=', 'BS.id')
+            ->Join('business_locations AS BS', 'transactions.location_id', '=', 'BS.id')
             ->leftJoin('transaction_payments AS TP', 'transactions.id', '=', 'TP.transaction_id')
             ->leftJoin('transactions AS PR', 'transactions.id', '=', 'PR.return_parent_id')
             ->leftjoin('purchase_lines', 'transactions.id', 'purchase_lines.transaction_id')
@@ -898,7 +905,9 @@ public function get9CCreditForm(Request $request)
                 'transactions.invoice_no',
             )
             ->groupBy('transactions.id');
+
         $permitted_locations = auth()->user()->permitted_locations();
+
         if ($permitted_locations != 'all') {
             $purchases->whereIn('transactions.location_id', $permitted_locations);
         }
@@ -907,10 +916,12 @@ public function get9CCreditForm(Request $request)
             $purchases->where('transactions.location_id', $location_id);
         }
 
-        if (!empty($start_date)) {
+        if (!empty($start_date)) {        
+            if (Carbon::hasFormat($start_date, 'm/d/Y'))  $start_date = Carbon::createFromFormat('m/d/Y', $start_date)->format('Y-m-d');
             $purchases->whereDate('transactions.transaction_date', $start_date);
         }
-        $purchases->orderBy('id', 'DESC');
+        $purchases->orderBy('id', 'DESC');       
+     
         return $purchases;
     }
 
@@ -919,91 +930,89 @@ public function get9CCreditForm(Request $request)
         $business_id = request()->session()->get('user.business_id');
         $settings = MpcsFormSetting::where('business_id', $business_id)->first();
         $F16A_form_tdate = $settings->F16A_form_tdate;
-       // $start_date = $F16A_form_tdate;
+        // $start_date = $F16A_form_tdate;
         $end_date = Carbon::parse($request->start_date)->subDays(1)->format('Y-m-d');
         $start_date = Carbon::parse($request->start_date)->format('Y-m-d');
         $start_date_prev = Carbon::parse($request->start_date)->subDays(1)->format('Y-m-d');
 
         $location_id = $request->location_id;
-     $formF16asettings=Mpcs16aFormSettings::where('business_id', $business_id)->first();
+        $formF16asettings = Mpcs16aFormSettings::where('business_id', $business_id)->first();
         $purchases = $this->F16AQuery($business_id, $start_date, $end_date, $location_id)->get();
         $pre_total_purchase_price = $settings->F16A_total_pp;
         $pre_total_sale_price = $settings->F16A_total_sp;
-          //total sales previous
-          $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();    
-        
-           \Log::info("F16A{$formF22Exists}");       
-          $header = Mpcs21cFormSettings::orderBy('created_at', 'desc')
-          ->get();
-         $previous_totals=[];
-         $starting_date= $header->first()->date;
-         $purchase_query_prevs=[];
-          if ($formF22Exists) {
-              $previous_total = 0;
-              $purchase_query_prevs=0;
+        //total sales previous
+        $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
 
-          } else {
-              $previous_total = DB::table('transactions')
-                  ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-                  ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
-                  ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
-                  ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-                  ->where('account_transactions.business_id', $business_id)
-                  ->where('transactions.is_credit_sale', 1)
-                  ->whereDate('transactions.transaction_date', '>=', $formF16asettings->date)
-                  ->whereDate('transactions.transaction_date', '<=', $start_date_prev)
-                  ->select(
-                      'products.name as product',
-                      'transactions.invoice_no as billno',
-                      'transaction_sell_lines.quantity as quantity',
-                      'transactions.final_total as final_total_rs'
-                  )
-                  ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
-                  ->get();
-          
-                  $previous_totals=$previous_total->sum('final_total_rs');
+        \Log::info("F16A{$formF22Exists}");
+        $header = Mpcs21cFormSettings::orderBy('created_at', 'desc')
+            ->get();
+        $previous_totals = [];
+        $starting_date = $header->first()->date;
+        $purchase_query_prevs = [];
+        if ($formF22Exists) {
+            $previous_total = 0;
+            $purchase_query_prevs = 0;
+        } else {
+            $previous_total = DB::table('transactions')
+                ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
+                ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
+                ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
+                ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+                ->where('account_transactions.business_id', $business_id)
+                ->where('transactions.is_credit_sale', 1)
+                ->whereDate('transactions.transaction_date', '>=', $formF16asettings->date)
+                ->whereDate('transactions.transaction_date', '<=', $start_date_prev)
+                ->select(
+                    'products.name as product',
+                    'transactions.invoice_no as billno',
+                    'transaction_sell_lines.quantity as quantity',
+                    'transactions.final_total as final_total_rs'
+                )
+                ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
+                ->get();
+
+            $previous_totals = $previous_total->sum('final_total_rs');
             $purchase_query_prev = DB::table('transactions')
-                  ->join('purchase_lines', 'transactions.id', '=', 'purchase_lines.transaction_id')
-                  ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-                  ->join('products', 'purchase_lines.product_id', '=', 'products.id')
-                  ->join('categories', 'products.sub_category_id', '=', 'categories.id')
-                  ->where('transactions.type', 'purchase')                 
-                   ->whereDate('transactions.transaction_date', '>=', $formF16asettings->date)
-                  ->whereDate('transactions.transaction_date', '<=', $start_date_prev)
-                  ->select(
-                      'categories.id as category_id',
-                      'categories.name as category_name',
-                      DB::raw('SUM(transaction_payments.amount) as total_amount')                  
-                  )
-                  
-                  ->groupBy('categories.id', 'categories.name')
-                  ->get();
-                
-                  $purchase_query_prevs=$purchase_query_prev->sum('total_amount');
-                   
-          }     
-          //dd($start_date);
-          if ($formF22Exists) {
-              $pre_total_purchase_price = 0;
-              $pre_total_sale_price =0;
-          } else {
+                ->join('purchase_lines', 'transactions.id', '=', 'purchase_lines.transaction_id')
+                ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+                ->join('products', 'purchase_lines.product_id', '=', 'products.id')
+                ->join('categories', 'products.sub_category_id', '=', 'categories.id')
+                ->where('transactions.type', 'purchase')
+                ->whereDate('transactions.transaction_date', '>=', $formF16asettings->date)
+                ->whereDate('transactions.transaction_date', '<=', $start_date_prev)
+                ->select(
+                    'categories.id as category_id',
+                    'categories.name as category_name',
+                    DB::raw('SUM(transaction_payments.amount) as total_amount')
+                )
+
+                ->groupBy('categories.id', 'categories.name')
+                ->get();
+
+            $purchase_query_prevs = $purchase_query_prev->sum('total_amount');
+        }
+        //dd($start_date);
+        if ($formF22Exists) {
+            $pre_total_purchase_price = 0;
+            $pre_total_sale_price = 0;
+        } else {
             if ($formF16asettings->date == $start_date) {
                 \Log::info("F16Astart date{ $start_date}");
-    $pre_total_sale_price = $formF16asettings->total_sale_price_with_vat;
-    $pre_total_purchase_price = $formF16asettings->total_purchase_price_with_vat;
-} else {
-     \Log::info("previous{ $previous_totals}");
-    $pre_total_sale_price = $formF16asettings->total_sale_price_with_vat +  $previous_totals;
-    $pre_total_purchase_price =  $formF16asettings->total_purchase_price_with_vat + $purchase_query_prevs;
-}
+                $pre_total_sale_price = $formF16asettings->total_sale_price_with_vat;
+                $pre_total_purchase_price = $formF16asettings->total_purchase_price_with_vat;
+            } else {
+                \Log::info("previous{ $previous_totals}");
+                $pre_total_sale_price = $formF16asettings->total_sale_price_with_vat +  $previous_totals;
+                $pre_total_purchase_price =  $formF16asettings->total_purchase_price_with_vat + $purchase_query_prevs;
+            }
 
             // foreach ($purchases as $item) {
             //     $pre_total_purchase_price = $pre_total_purchase_price + $item->total_purchase_price;
             //     $pre_total_sale_price = $pre_total_sale_price + $item->default_sell_price * $item->received_qty;
             // }
-          }
- 
-    \Log::info("F16A data{$pre_total_purchase_price}");
+        }
+
+        \Log::info("F16A data{$pre_total_purchase_price}");
         return ['pre_total_purchase_price' => $pre_total_purchase_price, 'pre_total_sale_price' => $pre_total_sale_price];
     }
 
@@ -1695,306 +1704,307 @@ public function get9CCreditForm(Request $request)
             'credit_sales_today' => (int) $credit_sales_today,
         ];
     }
-   
-public function get9BFormData(Request $request) 
-{
-    $business_id = $request->session()->get('business.id');
-    $start_date = $request->input('start_date');
-    $end_date = $request->input('end_date');
 
-    // Validate dates
-    if (empty($start_date) || empty($end_date)) {
+    public function get9BFormData(Request $request)
+    {
+        $business_id = $request->session()->get('business.id');
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+
+        // Validate dates
+        if (empty($start_date) || empty($end_date)) {
+            return response()->json([
+                'success' => false,
+                'msg' => 'Invalid date range'
+            ]);
+        }
+
+        // Get current period data
+        $currentData = $this->getSalesData($business_id, $start_date, $end_date);
+        // Get the latest settings record
+        $header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
+        $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
+
+        // if (!$header_latest) {
+        //     // Handle case when no settings exist
+        //     return response()->json([
+        //         'success' => false,
+        //         'msg' => 'No form settings found'
+        //     ]);
+        // }
+
+        // Get previous period data
+        $previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
+        $previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
+
+        // Use the date from settings for previous data
+        $previousData = $this->getSalesData(
+            $business_id,
+            $header_latest->date, // Using the date from settings
+            $previous_end_date
+        );
+
+        // Prepare response data
         return response()->json([
-            'success' => false,
-            'msg' => 'Invalid date range'
-        ]);
-    }
+            'success' => true,
+            'data' => [
+                'current' => [
+                    'total_sales' => $currentData['total_sales'],
+                    'cash_sales' => $currentData['cash_sales'],
+                    'card_sales' => $currentData['card_sales'],
+                    'credit_sales' => $currentData['credit_sales'],
+                    'empty_barrels' => $currentData['empty_barrels'],
+                    'other_sales' => $currentData['other_sales'],
+                    'total_amount' => $currentData['total_sales'] + $currentData['empty_barrels'] + $currentData['other_sales']
+                ],
+                'previous' => [
+                    'total_sales' => $previousData['total_sales'],
+                    'cash_sales' => $previousData['cash_sales'],
+                    'card_sales' => $previousData['card_sales'],
+                    'credit_sales' => $previousData['credit_sales'],
+                    'empty_barrels' => $previousData['empty_barrels'],
+                    'other_sales' => $previousData['other_sales'],
+                    'total_amount' => $previousData['total_sales'] + $previousData['empty_barrels'] + $previousData['other_sales']
+                ],
+                'combined' => [
+                    'total_sales' => $currentData['total_sales'] + $previousData['total_sales'],
+                    'cash_sales' => $currentData['cash_sales'] + $previousData['cash_sales'],
+                    'card_sales' => $currentData['card_sales'] + $previousData['card_sales'],
+                    'credit_sales' => $currentData['credit_sales'] + $previousData['credit_sales'],
+                    'empty_barrels' => $currentData['empty_barrels'] + $previousData['empty_barrels'],
+                    'other_sales' => $currentData['other_sales'] + $previousData['other_sales'],
+                    'total_amount' => ($currentData['total_sales'] + $previousData['total_sales']) +
+                        ($currentData['empty_barrels'] + $previousData['empty_barrels']) +
+                        ($currentData['other_sales'] + $previousData['other_sales'])
+                ],
+                'text_details' => $textDetails ? $textDetails->text_content : 'No additional details available'
 
-    // Get current period data
-    $currentData = $this->getSalesData($business_id, $start_date, $end_date);
-    // Get the latest settings record
-$header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
-$textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
- 
-// if (!$header_latest) {
-//     // Handle case when no settings exist
-//     return response()->json([
-//         'success' => false,
-//         'msg' => 'No form settings found'
-//     ]);
-// }
-
-// Get previous period data
-$previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
-$previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
-
-// Use the date from settings for previous data
-$previousData = $this->getSalesData(
-    $business_id, 
-    $header_latest->date, // Using the date from settings
-    $previous_end_date
-);
- 
-    // Prepare response data
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'current' => [
-                'total_sales' => $currentData['total_sales'],
-                'cash_sales' => $currentData['cash_sales'],
-                'card_sales' => $currentData['card_sales'],
-                'credit_sales' => $currentData['credit_sales'],
-                'empty_barrels' => $currentData['empty_barrels'],
-                'other_sales' => $currentData['other_sales'],
-                'total_amount' => $currentData['total_sales'] + $currentData['empty_barrels'] + $currentData['other_sales']
-            ],
-            'previous' => [
-                'total_sales' => $previousData['total_sales'],
-                'cash_sales' => $previousData['cash_sales'],
-                'card_sales' => $previousData['card_sales'],
-                'credit_sales' => $previousData['credit_sales'],
-                'empty_barrels' => $previousData['empty_barrels'],
-                'other_sales' => $previousData['other_sales'],
-                'total_amount' => $previousData['total_sales'] + $previousData['empty_barrels'] + $previousData['other_sales']
-            ],
-            'combined' => [
-                'total_sales' => $currentData['total_sales'] + $previousData['total_sales'],
-                'cash_sales' => $currentData['cash_sales'] + $previousData['cash_sales'],
-                'card_sales' => $currentData['card_sales'] + $previousData['card_sales'],
-                'credit_sales' => $currentData['credit_sales'] + $previousData['credit_sales'],
-                'empty_barrels' => $currentData['empty_barrels'] + $previousData['empty_barrels'],
-                'other_sales' => $currentData['other_sales'] + $previousData['other_sales'],
-                'total_amount' => ($currentData['total_sales'] + $previousData['total_sales']) + 
-                                 ($currentData['empty_barrels'] + $previousData['empty_barrels']) + 
-                                 ($currentData['other_sales'] + $previousData['other_sales'])
-            ],
-           'text_details' => $textDetails ? $textDetails->text_content : 'No additional details available'
-
-        ]
-    ]);
-}public function get9AFormData(Request $request) 
-{
-    $business_id = $request->session()->get('business.id');
-    $start_date = $request->input('start_date');
-    $end_date = $request->input('end_date');
-
-    // Validate dates
-    if (empty($start_date) || empty($end_date)) {
-        return response()->json([
-            'success' => false,
-            'msg' => 'Invalid date range'
-        ]);
-    }
-
-    // Get current period data
-    $currentData = $this->getSalesData($business_id, $start_date, $end_date);
-    
-    // Get the latest settings record
-    $header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
-$textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
-
-    // if (!$header_latest) {
-    //     return response()->json([
-    //         'success' => false,
-    //         'msg' => 'No form settings found'
-    //     ]);
-    // }
-
-    // Get previous period data (previous day)
-    $previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
-    $previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
-    
-    $previousData = $this->getSalesData(
-        $business_id, 
-        $previous_start_date,
-        $previous_end_date
-    );
- 
-    // Prepare response data
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'current' => [
-                'total_sales' => $currentData['total_sales'],
-                'cash_sales' => $currentData['cash_sales'],
-                'card_sales' => $currentData['card_sales'],
-                'credit_sales' => $currentData['credit_sales'],
-                'empty_barrels' => $currentData['empty_barrels'],
-                'other_sales' => $currentData['other_sales'],
-                'total_amount' => $currentData['total_sales'] + $currentData['empty_barrels'] + $currentData['other_sales']
-            ],
-            'previous' => [
-                'total_sales' => $previousData['total_sales'],
-                'cash_sales' => $previousData['cash_sales'],
-                'card_sales' => $previousData['card_sales'],
-                'credit_sales' => $previousData['credit_sales'],
-                'empty_barrels' => $previousData['empty_barrels'],
-                'other_sales' => $previousData['other_sales'],
-                'total_amount' => $previousData['total_sales'] + $previousData['empty_barrels'] + $previousData['other_sales']
-            ],
-            'combined' => [
-                'total_sales' => $currentData['total_sales'] + $previousData['total_sales'],
-                'cash_sales' => $currentData['cash_sales'] + $previousData['cash_sales'],
-                'card_sales' => $currentData['card_sales'] + $previousData['card_sales'],
-                'credit_sales' => $currentData['credit_sales'] + $previousData['credit_sales'],
-                'empty_barrels' => $currentData['empty_barrels'] + $previousData['empty_barrels'],
-                'other_sales' => $currentData['other_sales'] + $previousData['other_sales'],
-                'total_amount' => ($currentData['total_sales'] + $previousData['total_sales']) + 
-                                 ($currentData['empty_barrels'] + $previousData['empty_barrels']) + 
-                                 ($currentData['other_sales'] + $previousData['other_sales'])
-            ],
-            'text_details' => $textDetails ? $textDetails->text_content : 'No additional details available'
-        ]
-    ]);
-}
-
-private function getSalesData($business_id, $start_date, $end_date)
-{
-    // Get cash and card sales (non-credit)
-    $salesData = Transaction::join('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-        ->where('transactions.business_id', $business_id)
-        ->where('transactions.type', 'sell')
-        ->where('transactions.status', 'final')
-        ->where('transactions.is_credit_sale', 0)
-        ->whereDate('transactions.transaction_date', '>=', $start_date)
-        ->whereDate('transactions.transaction_date', '<=', $end_date)
-        ->select(
-            DB::raw('SUM(transaction_payments.amount) as total_amount'),
-            DB::raw('SUM(CASE WHEN transaction_payments.method = "cash" THEN transaction_payments.amount ELSE 0 END) as cash_sales'),
-            DB::raw('SUM(CASE WHEN transaction_payments.method = "card" THEN transaction_payments.amount ELSE 0 END) as card_sales')
-        )
-        ->first();
-
-    // Get credit sales separately
-    $creditSales = Transaction::where('business_id', $business_id)
-        ->where('type', 'sell')
-        ->where('status', 'final')
-        ->where('is_credit_sale', 1)
-        ->whereDate('transaction_date', '>=', $start_date)
-        ->whereDate('transaction_date', '<=', $end_date)
-        ->select(DB::raw('SUM(final_total) as credit_sales'))
-        ->first()
-        ->credit_sales ?? 0;
-
-    // Get empty barrels data
-    $emptyBarrels = Transaction::where('business_id', $business_id)
-        ->where('type', 'empty_barrel')
-        ->whereDate('transaction_date', '>=', $start_date)
-        ->whereDate('transaction_date', '<=', $end_date)
-        ->sum('final_total');
-
-    // Get other sales data (including transport if needed)
-    $otherSales = Transaction::where('business_id', $business_id)
-        ->where('type', 'other_sales')
-        ->whereDate('transaction_date', '>=', $start_date)
-        ->whereDate('transaction_date', '<=', $end_date)
-        ->sum('final_total');
-
-    return [
-        'total_sales' => ($salesData->total_amount ?? 0) + $creditSales,
-        'cash_sales' => $salesData->cash_sales ?? 0,
-        'card_sales' => $salesData->card_sales ?? 0,
-        'credit_sales' => $creditSales,
-        'empty_barrels' => $emptyBarrels ?? 0,
-        'other_sales' => $otherSales ?? 0
-    ];
-}
-public function getPaymentsData(Request $request) 
-{
-    $business_id = $request->session()->get('business.id');
-    $start_date = $request->input('start_date');
-    $end_date = $request->input('end_date');
-
-    // Validate dates
-    if (empty($start_date) || empty($end_date)) {
-        return response()->json([
-            'success' => false,
-            'msg' => 'Invalid date range'
-        ]);
-    }
-
-    // Get current period data
-    $currentData = $this->getPayments($business_id, $start_date, $end_date);
-    
-    // Get the latest settings record for previous data
-    $header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
- 
-    // if (!$header_latest) {
-    //     return response()->json([
-    //         'success' => false,
-    //         'msg' => 'No form settings found'
-    //     ]);
-    // }
-
-    // Get previous period data (previous day)
-    $previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
-    $previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
-    
-    $previousData = $this->getPayments(
-        $business_id, 
-        $previous_start_date,
-        $previous_end_date
-    );
- 
-    // Prepare response data
-    return response()->json([
-        'success' => true,
-        'data' => [
-            'current' => [
-                'cash_payments' => $currentData['cash_payments'],
-                'cheque_card_payments' => $currentData['cheque_card_payments'],
-                'total_payments' => $currentData['total_payments'],
-                'balance_in_hand' => $currentData['balance_in_hand'],
-                'grand_total' => $currentData['grand_total']
-            ],
-            'previous' => [
-                'cash_payments' => $previousData['cash_payments'],
-                'cheque_card_payments' => $previousData['cheque_card_payments'],
-                'total_payments' => $previousData['total_payments'],
-                'balance_in_hand' => $previousData['balance_in_hand'],
-                'grand_total' => $previousData['grand_total']
-            ],
-            'combined' => [
-                'cash_payments' => $currentData['cash_payments'] + $previousData['cash_payments'],
-                'cheque_card_payments' => $currentData['cheque_card_payments'] + $previousData['cheque_card_payments'],
-                'total_payments' => $currentData['total_payments'] + $previousData['total_payments'],
-                'balance_in_hand' => $currentData['balance_in_hand'] + $previousData['balance_in_hand'],
-                'grand_total' => $currentData['grand_total'] + $previousData['grand_total']
             ]
-        ]
-    ]);
-}
+        ]);
+    }
+    public function get9AFormData(Request $request)
+    {
+        $business_id = $request->session()->get('business.id');
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
 
-private function getPayments($business_id, $start_date, $end_date)
-{
-    // Get payments data
-    $paymentsData = Transaction::leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-        ->where('transactions.business_id', $business_id)
-        ->where('transactions.type', 'purchase')
-        ->whereDate('transactions.transaction_date', '>=', $start_date)
-        ->whereDate('transactions.transaction_date', '<=', $end_date)
-        ->select(
-            DB::raw('SUM(transaction_payments.amount) as total_amount'),
-            DB::raw('SUM(CASE WHEN transaction_payments.method = "cash" THEN transaction_payments.amount ELSE 0 END) as cash_payments'),
-            DB::raw('SUM(CASE WHEN transaction_payments.method IN ("cheque", "card") THEN transaction_payments.amount ELSE 0 END) as cheque_card_payments')
-        )
-        ->first();
+        // Validate dates
+        if (empty($start_date) || empty($end_date)) {
+            return response()->json([
+                'success' => false,
+                'msg' => 'Invalid date range'
+            ]);
+        }
 
-    // Calculate totals
-    $total_payments = $paymentsData->total_amount ?? 0;
-    $cash_payments = $paymentsData->cash_payments ?? 0;
-    $cheque_card_payments = $paymentsData->cheque_card_payments ?? 0;
-    
-    // These values should be calculated based on your business logic
-    $balance_in_hand = $cash_payments; // Adjust as needed
-    $grand_total = $total_payments; // Adjust as needed
+        // Get current period data
+        $currentData = $this->getSalesData($business_id, $start_date, $end_date);
 
-    return [
-        'cash_payments' => $cash_payments,
-        'cheque_card_payments' => $cheque_card_payments,
-        'total_payments' => $total_payments,
-        'balance_in_hand' => $balance_in_hand,
-        'grand_total' => $grand_total
-    ];
-}
+        // Get the latest settings record
+        $header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
+        $textDetails = Mpcs9aFormTextDetail::orderBy('created_at', 'desc')->first() ?? '-';
+
+        // if (!$header_latest) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'msg' => 'No form settings found'
+        //     ]);
+        // }
+
+        // Get previous period data (previous day)
+        $previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
+        $previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
+
+        $previousData = $this->getSalesData(
+            $business_id,
+            $previous_start_date,
+            $previous_end_date
+        );
+
+        // Prepare response data
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'current' => [
+                    'total_sales' => $currentData['total_sales'],
+                    'cash_sales' => $currentData['cash_sales'],
+                    'card_sales' => $currentData['card_sales'],
+                    'credit_sales' => $currentData['credit_sales'],
+                    'empty_barrels' => $currentData['empty_barrels'],
+                    'other_sales' => $currentData['other_sales'],
+                    'total_amount' => $currentData['total_sales'] + $currentData['empty_barrels'] + $currentData['other_sales']
+                ],
+                'previous' => [
+                    'total_sales' => $previousData['total_sales'],
+                    'cash_sales' => $previousData['cash_sales'],
+                    'card_sales' => $previousData['card_sales'],
+                    'credit_sales' => $previousData['credit_sales'],
+                    'empty_barrels' => $previousData['empty_barrels'],
+                    'other_sales' => $previousData['other_sales'],
+                    'total_amount' => $previousData['total_sales'] + $previousData['empty_barrels'] + $previousData['other_sales']
+                ],
+                'combined' => [
+                    'total_sales' => $currentData['total_sales'] + $previousData['total_sales'],
+                    'cash_sales' => $currentData['cash_sales'] + $previousData['cash_sales'],
+                    'card_sales' => $currentData['card_sales'] + $previousData['card_sales'],
+                    'credit_sales' => $currentData['credit_sales'] + $previousData['credit_sales'],
+                    'empty_barrels' => $currentData['empty_barrels'] + $previousData['empty_barrels'],
+                    'other_sales' => $currentData['other_sales'] + $previousData['other_sales'],
+                    'total_amount' => ($currentData['total_sales'] + $previousData['total_sales']) +
+                        ($currentData['empty_barrels'] + $previousData['empty_barrels']) +
+                        ($currentData['other_sales'] + $previousData['other_sales'])
+                ],
+                'text_details' => $textDetails ? $textDetails->text_content : 'No additional details available'
+            ]
+        ]);
+    }
+
+    private function getSalesData($business_id, $start_date, $end_date)
+    {
+        // Get cash and card sales (non-credit)
+        $salesData = Transaction::join('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+            ->where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'sell')
+            ->where('transactions.status', 'final')
+            ->where('transactions.is_credit_sale', 0)
+            ->whereDate('transactions.transaction_date', '>=', $start_date)
+            ->whereDate('transactions.transaction_date', '<=', $end_date)
+            ->select(
+                DB::raw('SUM(transaction_payments.amount) as total_amount'),
+                DB::raw('SUM(CASE WHEN transaction_payments.method = "cash" THEN transaction_payments.amount ELSE 0 END) as cash_sales'),
+                DB::raw('SUM(CASE WHEN transaction_payments.method = "card" THEN transaction_payments.amount ELSE 0 END) as card_sales')
+            )
+            ->first();
+
+        // Get credit sales separately
+        $creditSales = Transaction::where('business_id', $business_id)
+            ->where('type', 'sell')
+            ->where('status', 'final')
+            ->where('is_credit_sale', 1)
+            ->whereDate('transaction_date', '>=', $start_date)
+            ->whereDate('transaction_date', '<=', $end_date)
+            ->select(DB::raw('SUM(final_total) as credit_sales'))
+            ->first()
+            ->credit_sales ?? 0;
+
+        // Get empty barrels data
+        $emptyBarrels = Transaction::where('business_id', $business_id)
+            ->where('type', 'empty_barrel')
+            ->whereDate('transaction_date', '>=', $start_date)
+            ->whereDate('transaction_date', '<=', $end_date)
+            ->sum('final_total');
+
+        // Get other sales data (including transport if needed)
+        $otherSales = Transaction::where('business_id', $business_id)
+            ->where('type', 'other_sales')
+            ->whereDate('transaction_date', '>=', $start_date)
+            ->whereDate('transaction_date', '<=', $end_date)
+            ->sum('final_total');
+
+        return [
+            'total_sales' => ($salesData->total_amount ?? 0) + $creditSales,
+            'cash_sales' => $salesData->cash_sales ?? 0,
+            'card_sales' => $salesData->card_sales ?? 0,
+            'credit_sales' => $creditSales,
+            'empty_barrels' => $emptyBarrels ?? 0,
+            'other_sales' => $otherSales ?? 0
+        ];
+    }
+    public function getPaymentsData(Request $request)
+    {
+        $business_id = $request->session()->get('business.id');
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+
+        // Validate dates
+        if (empty($start_date) || empty($end_date)) {
+            return response()->json([
+                'success' => false,
+                'msg' => 'Invalid date range'
+            ]);
+        }
+
+        // Get current period data
+        $currentData = $this->getPayments($business_id, $start_date, $end_date);
+
+        // Get the latest settings record for previous data
+        $header_latest = Mpcs21cFormSettings::orderBy('created_at', 'desc')->first();
+
+        // if (!$header_latest) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'msg' => 'No form settings found'
+        //     ]);
+        // }
+
+        // Get previous period data (previous day)
+        $previous_start_date = Carbon::parse($start_date)->subDay()->format('Y-m-d');
+        $previous_end_date = Carbon::parse($end_date)->subDay()->format('Y-m-d');
+
+        $previousData = $this->getPayments(
+            $business_id,
+            $previous_start_date,
+            $previous_end_date
+        );
+
+        // Prepare response data
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'current' => [
+                    'cash_payments' => $currentData['cash_payments'],
+                    'cheque_card_payments' => $currentData['cheque_card_payments'],
+                    'total_payments' => $currentData['total_payments'],
+                    'balance_in_hand' => $currentData['balance_in_hand'],
+                    'grand_total' => $currentData['grand_total']
+                ],
+                'previous' => [
+                    'cash_payments' => $previousData['cash_payments'],
+                    'cheque_card_payments' => $previousData['cheque_card_payments'],
+                    'total_payments' => $previousData['total_payments'],
+                    'balance_in_hand' => $previousData['balance_in_hand'],
+                    'grand_total' => $previousData['grand_total']
+                ],
+                'combined' => [
+                    'cash_payments' => $currentData['cash_payments'] + $previousData['cash_payments'],
+                    'cheque_card_payments' => $currentData['cheque_card_payments'] + $previousData['cheque_card_payments'],
+                    'total_payments' => $currentData['total_payments'] + $previousData['total_payments'],
+                    'balance_in_hand' => $currentData['balance_in_hand'] + $previousData['balance_in_hand'],
+                    'grand_total' => $currentData['grand_total'] + $previousData['grand_total']
+                ]
+            ]
+        ]);
+    }
+
+    private function getPayments($business_id, $start_date, $end_date)
+    {
+        // Get payments data
+        $paymentsData = Transaction::leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
+            ->where('transactions.business_id', $business_id)
+            ->where('transactions.type', 'purchase')
+            ->whereDate('transactions.transaction_date', '>=', $start_date)
+            ->whereDate('transactions.transaction_date', '<=', $end_date)
+            ->select(
+                DB::raw('SUM(transaction_payments.amount) as total_amount'),
+                DB::raw('SUM(CASE WHEN transaction_payments.method = "cash" THEN transaction_payments.amount ELSE 0 END) as cash_payments'),
+                DB::raw('SUM(CASE WHEN transaction_payments.method IN ("cheque", "card") THEN transaction_payments.amount ELSE 0 END) as cheque_card_payments')
+            )
+            ->first();
+
+        // Calculate totals
+        $total_payments = $paymentsData->total_amount ?? 0;
+        $cash_payments = $paymentsData->cash_payments ?? 0;
+        $cheque_card_payments = $paymentsData->cheque_card_payments ?? 0;
+
+        // These values should be calculated based on your business logic
+        $balance_in_hand = $cash_payments; // Adjust as needed
+        $grand_total = $total_payments; // Adjust as needed
+
+        return [
+            'cash_payments' => $cash_payments,
+            'cheque_card_payments' => $cheque_card_payments,
+            'total_payments' => $total_payments,
+            'balance_in_hand' => $balance_in_hand,
+            'grand_total' => $grand_total
+        ];
+    }
 }

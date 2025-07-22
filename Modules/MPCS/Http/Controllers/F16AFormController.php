@@ -29,7 +29,9 @@ use Modules\MPCS\Entities\FormF22Header;
 use Modules\MPCS\Entities\Mpcs21cFormSettings;
 use App\Contact;
 use App\Transaction;
+use Illuminate\Support\Facades\Log;
 use Modules\MPCS\Entities\Mpcs16aFormSettings;
+use Mpdf\Tag\Tr;
 
 class F16AFormController extends Controller
 {
@@ -72,15 +74,15 @@ class F16AFormController extends Controller
 
         // Get settings from dedicated 16A form settings table
         $settings = Mpcs16aFormSettings::where('business_id', $business_id)
-        ->latest() // defaults to ordering by 'created_at' descending
-        ->first();
+            ->latest() // defaults to ordering by 'created_at' descending
+            ->first();
        
         $bname = Business::where('id', $business_id)->first();
 
         // These variables can be used for other parts of the view
         $form_number = optional($settings)->ref_pre_form_number ? $settings->ref_pre_form_number : "";
         $date = optional($settings)->date ? $settings->date : "";
-        $userAdded = $bname ? $bname->name : "";      
+        $userAdded = $bname ? $bname->name : "";
 
 
         $dateRange = $request->input('form_16a_date_range');
@@ -97,30 +99,30 @@ class F16AFormController extends Controller
         // New logic to generate F16a_from_no
 
 
-if (!empty($settings)) {
-    $current_date = Carbon::today();
-    $starting_day = Carbon::parse($settings->date);
+        if (!empty($settings)) {
+            $current_date = Carbon::today();
+            $starting_day = Carbon::parse($settings->date);
 
-    $form_number = $settings->starting_number;
-    $date_to_check = $starting_day->copy();
+            $form_number = $settings->starting_number;
+            $date_to_check = $starting_day->copy();
 
-    while ($date_to_check->lte($current_date)) {
-        // Only increment if purchases exist on this day
-        $purchases_exist = Transaction::where('type', 'purchase')
-            ->whereDate('created_at', $date_to_check)
-            ->exists();
+            while ($date_to_check->lte($current_date)) {
+                // Only increment if purchases exist on this day
+                $purchases_exist = Transaction::where('type', 'purchase')
+                    ->whereDate('created_at', $date_to_check)
+                    ->exists();
 
-        if ($purchases_exist) {
-            $form_number++;
+                if ($purchases_exist) {
+                    $form_number++;
+                }
+
+                $date_to_check->addDay();
+            }
+
+            $F16a_from_no = $form_number;
+        } else {
+            $F16a_from_no = '';
         }
-
-        $date_to_check->addDay();
-    }
-
-    $F16a_from_no = $form_number;
-} else {
-    $F16a_from_no = '';
-}
 
 
 
@@ -132,8 +134,7 @@ if (!empty($settings)) {
         $setting = MpcsFormSetting::where('business_id', $business_id)->first();
         $max_form_no = FormF16Detail::max('form_no');
         $all_form_no = FormF16Detail::pluck('form_no')->toArray();
-        $max_form_nos = $max_form_no + 1;
-
+        $max_form_nos = $max_form_no + 1;        
         $purchases = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
             ->join('business_locations AS BS', 'transactions.location_id', '=', 'BS.id')
             ->leftJoin('transaction_payments AS TP', 'transactions.id', '=', 'TP.transaction_id')
@@ -169,7 +170,7 @@ if (!empty($settings)) {
             ->groupBy('transactions.id')
             ->get()
             ->toArray();
-
+        Log::info($purchases);    
         $lastRecord = end($purchases);
         $name = $lastRecord['name'] ?? '';
         $invoice = $lastRecord['invoice'] ?? '';
@@ -186,7 +187,7 @@ if (!empty($settings)) {
             'lastRecord',
             'form_number',
             'date',
-            'userAdded',           
+            'userAdded',
             'name',
             'invoice'
         ));
@@ -258,7 +259,7 @@ if (!empty($settings)) {
 
         // Get your 16A form settings record.
         $settings = Mpcs16aFormSettings::where('business_id', $business_id)->latest()->first();
- $setting = Mpcs21cFormSettings::where('business_id', $business_id)->first();
+        $setting = Mpcs21cFormSettings::where('business_id', $business_id)->first();
         // Default previous totals.
         $pre_total_purchase_price = 0;
         $pre_total_sale_price = 0;
@@ -288,44 +289,44 @@ if (!empty($settings)) {
                         DB::raw('SUM(grand_total) as total_grand')
                     )
                     ->first();
- $purchases = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
-            ->join('business_locations AS BS', 'transactions.location_id', '=', 'BS.id')
-            ->leftJoin('transaction_payments AS TP', 'transactions.id', '=', 'TP.transaction_id')
-            ->leftJoin('transactions AS PR', 'transactions.id', '=', 'PR.return_parent_id')
-            ->leftJoin('purchase_lines', 'transactions.id', 'purchase_lines.transaction_id')
-            ->leftJoin('products', 'purchase_lines.product_id', 'products.id')
-            ->leftJoin('variations', 'products.id', 'variations.product_id')
-            ->leftJoin('users as u', 'transactions.created_by', '=', 'u.id')
-            ->where('transactions.business_id', $business_id)
-            ->whereDate('transactions.transaction_date', '>=', $setting->date)
-            ->whereDate('transactions.transaction_date', '<=', $previous_end_date)
-            ->where('transactions.status', 'received')
-            ->select(
-                'transactions.id',
-                'transactions.invoice_no as invoice',
-                'transactions.ref_no as reference_no',
-                'purchase_lines.quantity as received_qty',
-                'purchase_lines.purchase_price as unit_purchase_price',
-                'transactions.final_total as total_purchase_price',
-                'BS.name as location',
-                'contacts.name as name',
-                'transactions.updated_at as date',
-                'products.name as product',
-                'products.id as product_id',
-                'variations.default_sell_price',
-                'transactions.pay_term_number',
-                'transactions.pay_term_type',
-                'PR.id as return_transaction_id',
-                DB::raw('SUM(TP.amount) as amount_paid'),
-                DB::raw('(SELECT SUM(TP2.amount) FROM transaction_payments AS TP2 WHERE TP2.transaction_id=PR.id ) as return_paid'),
-                DB::raw('COUNT(PR.id) as return_exists'),
-                DB::raw('COALESCE(PR.final_total, 0) as amount_return'),
-                DB::raw("CONCAT(COALESCE(u.surname, ''),' ',COALESCE(u.first_name, ''),' ',COALESCE(u.last_name,'')) as added_by")
-            )
-            ->groupBy('transactions.id')
-            ->get()
-            ->toArray();
-            \Log::log("purchase{$purchases}");
+                $purchases = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
+                    ->join('business_locations AS BS', 'transactions.location_id', '=', 'BS.id')
+                    ->leftJoin('transaction_payments AS TP', 'transactions.id', '=', 'TP.transaction_id')
+                    ->leftJoin('transactions AS PR', 'transactions.id', '=', 'PR.return_parent_id')
+                    ->leftJoin('purchase_lines', 'transactions.id', 'purchase_lines.transaction_id')
+                    ->leftJoin('products', 'purchase_lines.product_id', 'products.id')
+                    ->leftJoin('variations', 'products.id', 'variations.product_id')
+                    ->leftJoin('users as u', 'transactions.created_by', '=', 'u.id')
+                    ->where('transactions.business_id', $business_id)
+                    ->whereDate('transactions.transaction_date', '>=', $setting->date)
+                    ->whereDate('transactions.transaction_date', '<=', $previous_end_date)
+                    ->where('transactions.status', 'received')
+                    ->select(
+                        'transactions.id',
+                        'transactions.invoice_no as invoice',
+                        'transactions.ref_no as reference_no',
+                        'purchase_lines.quantity as received_qty',
+                        'purchase_lines.purchase_price as unit_purchase_price',
+                        'transactions.final_total as total_purchase_price',
+                        'BS.name as location',
+                        'contacts.name as name',
+                        'transactions.updated_at as date',
+                        'products.name as product',
+                        'products.id as product_id',
+                        'variations.default_sell_price',
+                        'transactions.pay_term_number',
+                        'transactions.pay_term_type',
+                        'PR.id as return_transaction_id',
+                        DB::raw('SUM(TP.amount) as amount_paid'),
+                        DB::raw('(SELECT SUM(TP2.amount) FROM transaction_payments AS TP2 WHERE TP2.transaction_id=PR.id ) as return_paid'),
+                        DB::raw('COUNT(PR.id) as return_exists'),
+                        DB::raw('COALESCE(PR.final_total, 0) as amount_return'),
+                        DB::raw("CONCAT(COALESCE(u.surname, ''),' ',COALESCE(u.first_name, ''),' ',COALESCE(u.last_name,'')) as added_by")
+                    )
+                    ->groupBy('transactions.id')
+                    ->get()
+                    ->toArray();
+                \Log::log("purchase{$purchases}");
                 $pre_total_purchase_price = $previous_data->total_grand ?? 0;
                 $pre_total_sale_price     = $previous_data->total_grand ?? 0;
             }
@@ -360,11 +361,11 @@ if (!empty($settings)) {
                 $header->where('form_f16_details.supplier', 'like', $supplierStart . '%');
             }
 
-             if (!empty($request->input('start_date')) && !empty($request->input('end_date'))) {
+            if (!empty($request->input('start_date')) && !empty($request->input('end_date'))) {
 
-                  $header->whereDate('form_f16_details.created_at', '>=', request()->start_date);
-                  $header->whereDate('form_f16_details.created_at', '<=', request()->end_date);
-                }
+                $header->whereDate('form_f16_details.created_at', '>=', request()->start_date);
+                $header->whereDate('form_f16_details.created_at', '<=', request()->end_date);
+            }
 
             return Datatables::of($header)
                 ->addIndexColumn()
