@@ -325,23 +325,20 @@
                                             <tfoot class="bg-gray">
                                     <tr>
                                         <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.total_this_page')</td>
-                                        <td class="text-red text-bold" id="footer_9c_total"></td>
-                                        {{-- <td class="text-red text-bold" id="footer_9c_total_cent"></td> --}}
+                                        <td class="text-red text-bold text-right" id="footer_9c_total"></td>
                                         <td  colspan="5"></td>
                                         
                                     </tr>
                                     <tr>
                                         <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.total_previous_page')
                                         </td>
-                                        <td class="text-red text-bold" id="pre_9c_total">
+                                        <td class="text-red text-bold text-right" id="pre_9c_total">
                                             </td>
-                                        {{-- <td class="text-red text-bold" id="pre_9c_total_cent"> </td> --}}
                                         <td  colspan="5"></td>
                                     </tr>
                                     <tr>
                                         <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.grand_total')</td>
-                                        <td class="text-red text-bold" id="grand_9c_total"></td>
-                                        {{-- <td class="text-red text-bold" id="grand_9c_total_cent"> </td> --}}
+                                        <td class="text-red text-bold text-right" id="grand_9c_total"></td>
                                         <td  colspan="5"></td>
                                     </tr>
                                     

@@ -54,6 +54,9 @@
      
     <script>
          $(document).ready(function() {
+            let  curdate = moment().format('YYYY-MM-DD');
+           
+            
             // Initialize the date picker
             $('#9ccr_date_range').daterangepicker({
                     singleDatePicker: true, // For selecting a single date
@@ -69,11 +72,35 @@
                     }
                 }, function(start, end, label) {
                     if (label === 'Custom Date Range') {
+                        // If the user selects 'Custom Date Range', show the modal for manual input
+                        let curdata_YMD = curdate.split('-');
+                        $('#custom_date_from_year1').val(curdata_YMD[0].substring(0, 1));
+                        $('#custom_date_from_year2').val(curdata_YMD[0].substring(1, 2));
+                        $('#custom_date_from_year3').val(curdata_YMD[0].substring(2, 3));
+                        $('#custom_date_from_year4').val(curdata_YMD[0].substring(3, 4));
+                        $('#custom_date_from_month1').val(curdata_YMD[1].substring(0, 1));
+                        $('#custom_date_from_month2').val(curdata_YMD[1].substring(1, 2));  
+                        $('#custom_date_from_date1').val(curdata_YMD[2].substring(0, 1));
+                        $('#custom_date_from_date2').val(curdata_YMD[2].substring(1, 2));
+                        $('#custom_date_to_year1').val(curdata_YMD[0].substring(0, 1));
+                        $('#custom_date_to_year2').val(curdata_YMD[0].substring(1, 2));
+                        $('#custom_date_to_year3').val(curdata_YMD[0].substring(2, 3));
+                        $('#custom_date_to_year4').val(curdata_YMD[0].substring(3, 4));
+                        $('#custom_date_to_month1').val(curdata_YMD[1].substring(0, 1));
+                        $('#custom_date_to_month2').val(curdata_YMD[1].substring(1, 2));
+                        $('#custom_date_to_date1').val(curdata_YMD[2].substring(0, 1));
+                        $('#custom_date_to_date2').val(curdata_YMD[2].substring(1, 2));
+                        // Set the start and end dates for the custom date range
+                        
+                        let startDate = $('#custom_date_from_year1').val() + $('#custom_date_from_year2').val() + $('#custom_date_from_year3').val() + $('#custom_date_from_year4').val() + "-" + $('#custom_date_from_month1').val() + $('#custom_date_from_month2').val() + "-" + $('#custom_date_from_date1').val() + $('#custom_date_from_date2').val();
+                        let endDate = $('#custom_date_to_year1').val() + $('#custom_date_to_year2').val() + $('#custom_date_to_year3').val() + $('#custom_date_to_year4').val() + "-" + $('#custom_date_to_month1').val() + $('#custom_date_to_month2').val() + "-" + $('#custom_date_to_date1').val() + $('#custom_date_to_date2').val();
                         // Show the modal for manual input
                         $('.custom_date_typing_modal').modal('show');
                         // $('.custom_date_typing_modal').modal('show'); // Uncomment if needed
                     }else{
                     // Set the selected date in the input
+                    curdate = start.format('YYYY-MM-DD');                 
+                   
                     $('#9ccr_date_range').val(start.format('YYYY-MM-DD'));
 
                     // Refresh DataTable with new date
@@ -154,9 +181,12 @@
                     {
                         data: 'quantity',
                         name: 'quantity',
+                        // className: 'text-right',
                         render: function(data, type, row) {
                             if (data == null || data === '') return '';
-                            return parseFloat(data).toFixed(3);
+                            var tag = '<span class="display_currency">' + (row.quantity || 0) + '</span>';
+                            return tag;
+                            // return parseFloat(data).toFixed(3);
                         }
                     },
                     {
@@ -166,10 +196,13 @@
                     {
                         data: 'final_total_rs',
                         name: 'final_total_rs',
+                        // className: 'text-right',
                         render: function(data, type, row) {
                             if (data == null || data === '') return '';
-                            let value = (row.final_total_rs || 0) + '.' + (row.final_total_cent || '00');
-                            return parseFloat(value).toFixed({{ $currency_precision }});
+                            var tag = '<span class="display_currency">' + (row.final_total_rs || 0) + '</span>';
+                            return tag;
+                            // let value = (row.final_total_rs || 0) + '.' + (row.final_total_cent || '00');
+                            // return parseFloat(value).toFixed({{ $currency_precision }});
                         }
                     },
                     // {
@@ -265,14 +298,14 @@
     // }
 
     // Format and set today's total
-     api.rows({ page: 'current' }).data().each(function (row) {
+    api.rows({ page: 'current' }).data().each(function (row) {
         const rs = parseFloat(row.final_total_rs) || 0;
         const cent = parseFloat(row.final_total_cent) || 0;
 
-        totalRs += rs + (cent / 100);
+        totalRs += cent;
     });
-    $('#footer_9c_total').html(totalRs.toFixed({{ $currency_precision }}));
-    $('#footer_9c_total_cent').html(totalCent.toString().padStart(2, '0'));
+    $('#footer_9c_total').html(__number_f(totalRs));
+    // $('#footer_9c_total_cent').html(totalCent.toString().padStart(2, '0'));
 
 
     // Handle previous totals
@@ -290,8 +323,8 @@
     }
 
     let previousTotal = previousRs;
-    $('#pre_9c_total').html(previousTotal.toFixed({{ $currency_precision }}));
-    $('#pre_9c_total_cent').html(totalPreviousCent.toString().padStart(2, '0'));
+    $('#pre_9c_total').html(__number_f(previousRs));
+    
 
     // Calculate and set grand total
     let grandRs = totalRs + previousTotal;
@@ -302,8 +335,7 @@
         grandCent = grandCent % 100;
     }
 
-    $('#grand_9c_total').html(grandRs.toFixed({{ $currency_precision }}));
-    $('#grand_9c_total_cent').html(grandCent.toString().padStart(2, '0'));
+    $('#grand_9c_total').html(__number_f(grandRs));
 
     let form_9ccr_no = !response.form_9ccr_no && response.form_9ccr_no == 0 ? '-' : response.form_9ccr_no ;
     $('#form_9ccr_no').html(form_9ccr_no);

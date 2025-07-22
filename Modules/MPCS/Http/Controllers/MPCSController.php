@@ -639,7 +639,7 @@ class MPCSController extends Controller
                 if ($formF22Exists) {
                     $previous_total = 0;
                 } else {
-                    $previous_total = DB::table('transactions')
+                    $previous_totals = DB::table('transactions')
                         ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
                         ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
                         ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
@@ -657,7 +657,7 @@ class MPCSController extends Controller
                         ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
                         ->get();
 
-                    $previous_totals = $previous_total->sum('final_total_rs');
+                    $previous_total = $previous_totals->sum('final_total_rs');
                 }
 
                 \Log::info('get9CCashForm called', [
@@ -666,12 +666,13 @@ class MPCSController extends Controller
                     'data' => $previous_totals,
 
                 ]);
+               // dd($cash_sales_today);
                 return Datatables::of($cash_sales_today)
                     ->removeColumn('id')
                     ->with([
                         'previous_total' => [
-                            'rs' => (int) $previous_totals,
-                            'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
+                            'rs' => (int) $previous_total,
+                            'cent' => str_pad(round(($previous_total - floor($previous_total)) * 100), $currency_precision, '0', STR_PAD_LEFT),
                         ]
                     ])
                     ->addColumn('page', fn() => '')
@@ -723,6 +724,7 @@ class MPCSController extends Controller
             $setting = Mpcs9cCreditFormSettings::where('business_id', $business_id)
                 ->orderBy('id', 'desc')
                 ->first();
+             
             if ($setting) {
                 $setting_start_date = Carbon::parse($setting->date_time)->format('Y-m-d');
                 $starting_number = $setting->starting_number;
@@ -742,6 +744,7 @@ class MPCSController extends Controller
 
                 if ($setting_start_date && $setting_start_date <= $start_date) {
                     // Get cash sales
+                   
                     $cash_sales_today = DB::table('transactions')
                         ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
                         ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
@@ -755,21 +758,23 @@ class MPCSController extends Controller
                             'products.name as product',
                             'transactions.invoice_no as billno',
                             'transaction_sell_lines.quantity as quantity',
-                            'transactions.final_total as final_total_rs'
+                            'transactions.final_total as final_total_rs',
                         )
                         ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
                         ->get();
+
                 } else {
                     $cash_sales_today = collect();
                 }
 
+
                 // Check if FormF22Header exists for the given start date
                 $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
-
-                $previous_totals = 0;
+               
+                $previous_totals = [];
                 $previous_total = 0;
                 if (!$formF22Exists && $setting) {
-                    $previous_total = DB::table('transactions')
+                    $previous_totals = DB::table('transactions')
                         ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
                         ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
                         ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
@@ -786,13 +791,13 @@ class MPCSController extends Controller
                         )
                         ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
                         ->get();
-
-                    $previous_totals = $previous_total->sum('final_total_rs') + $setting->ref_pre_form_number;
+                    
+                    $previous_total = $previous_totals->sum('final_total_rs') + $setting->ref_pre_form_number;
                 }
 
                 $form_9ccr_no = 0;
                 if ($setting) {
-
+                          
                     $uniqueTransactionDatesCount = DB::table('transactions')
                         ->where('business_id', $business_id)
                         ->where('is_credit_sale', 0)
@@ -800,6 +805,7 @@ class MPCSController extends Controller
                         ->whereDate('transaction_date', '<', $start_date)
                         ->distinct()
                         ->count(DB::raw('DATE(transaction_date)'));
+                      
                     $form_9ccr_no = $uniqueTransactionDatesCount + $starting_number;
                 }
 
@@ -819,13 +825,13 @@ class MPCSController extends Controller
                     $form_9ccr_no = 0;
                     $previous_totals = 0;
                 }
-
+                
                 return Datatables::of($cash_sales_today)
                     ->removeColumn('id')
                     ->with([
                         'previous_total' => [
-                            'rs' => $previous_totals,
-                            'cent' => str_pad(round(($previous_totals - floor($previous_totals)) * 100), $currency_precision, '0', STR_PAD_LEFT),
+                            'rs' => $previous_total,
+                            'cent' => str_pad(round(($previous_total - floor($previous_total)) * 100), $currency_precision, '0', STR_PAD_LEFT),
                         ],
                         'form_9ccr_no' => $form_9ccr_no,
                         'custom_message' => $custom_message
@@ -833,17 +839,19 @@ class MPCSController extends Controller
                     ->addColumn('page', fn() => '')
 
                     ->editColumn('quantity', function ($row) use ($qty_precision) {
-                        return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
+                        return number_format((float)$row->quantity,2);
+                        // return str_pad($row->quantity, $qty_precision, '0', STR_PAD_LEFT); // Ensure 2 digits like 05, 09, etc.
                     })
                     // Split final_total into Rs and Cents
                     ->editColumn('final_total_rs', function ($row) {
                         $amount = (float) $row->final_total_rs;
-                        return (int) $amount;
+                        return number_format($amount,2);
                     })
                     ->addColumn('final_total_cent', function ($row) use ($currency_precision) {
                         $amount = (float) $row->final_total_rs;
-                        $decimal = round(($amount - floor($amount)) * 100);
-                        return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
+                        return $amount;
+                        // $decimal = round(($amount - floor($amount)) * 100);
+                        // return str_pad($decimal, $currency_precision, '0', STR_PAD_LEFT);
                     })
 
                     // Optional: You can handle other columns similarly if needed
@@ -858,6 +866,7 @@ class MPCSController extends Controller
                     ->addColumn('other_rs', fn() => '')
                     ->addColumn('other_cent', fn() => '')
                     ->make(true);
+
             }
         } catch (\Exception $e) {
             \Log::error('Error in get9CCashForm', [
@@ -905,23 +914,24 @@ class MPCSController extends Controller
                 'transactions.invoice_no',
             )
             ->groupBy('transactions.id');
-
+            
         $permitted_locations = auth()->user()->permitted_locations();
 
         if ($permitted_locations != 'all') {
             $purchases->whereIn('transactions.location_id', $permitted_locations);
         }
-
+           
         if (!empty($location_id)) {
             $purchases->where('transactions.location_id', $location_id);
         }
-
-        if (!empty($start_date)) {        
+         
+        if (!empty($start_date)) {                    
             if (Carbon::hasFormat($start_date, 'm/d/Y'))  $start_date = Carbon::createFromFormat('m/d/Y', $start_date)->format('Y-m-d');
             $purchases->whereDate('transactions.transaction_date', $start_date);
+           
         }
         $purchases->orderBy('id', 'DESC');       
-     
+       
         return $purchases;
     }
 
@@ -941,6 +951,7 @@ class MPCSController extends Controller
         $pre_total_purchase_price = $settings->F16A_total_pp;
         $pre_total_sale_price = $settings->F16A_total_sp;
         //total sales previous
+       
         $formF22Exists = FormF22Header::whereDate('created_at', $start_date)->exists();
 
         \Log::info("F16A{$formF22Exists}");

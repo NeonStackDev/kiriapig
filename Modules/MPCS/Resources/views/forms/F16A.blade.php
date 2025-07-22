@@ -140,7 +140,7 @@
                 }
             });
 
-           $(document).ready(function () {
+           
                 $('#form_16a_date').daterangepicker({
                     singleDatePicker: true,
                     showDropdowns: true,
@@ -189,7 +189,7 @@
                     } else {
                         alert("Please select both start and end dates.");
                     }
-                });
+                
 
     // Cancel resets the input
     $('#form_16a_date').on('cancel.daterangepicker', function (ev, picker) {
@@ -376,7 +376,7 @@
                 data: function(d) {
 
                     var selectedDate = $('#form_16a_date').val(); // Get selected date from input field
-
+                                                          
                     if (selectedDate) {
                         d.start_date = selectedDate;
                         d.end_date = selectedDate;
