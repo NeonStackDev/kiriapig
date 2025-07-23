@@ -291,6 +291,8 @@
                                                 <tr class="align-middle text-center">
                                                     <th class="align-middle text-center" rowspan="2">@lang('mpcs::lang.bill_no')
                                                     </th>
+                                                    <th class="align-middle text-center" rowspan="2">@lang('mpcs::lang.our_ref')
+                                                    </th>
                                                     <th class="align-middle text-center" rowspan="2">@lang('mpcs::lang.product_name')
                                                     </th>
                                                     <th class="align-middle text-center" rowspan="2">@lang('mpcs::lang.qty')
@@ -323,27 +325,27 @@
                                                
                                             </tbody>
                                             <tfoot class="bg-gray">
-                                    <tr>
-                                        <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.total_this_page')</td>
-                                        <td class="text-red text-bold text-right" id="footer_9c_total"></td>
-                                        <td  colspan="5"></td>
-                                        
-                                    </tr>
-                                    <tr>
-                                        <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.total_previous_page')
-                                        </td>
-                                        <td class="text-red text-bold text-right" id="pre_9c_total">
-                                            </td>
-                                        <td  colspan="5"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-red text-bold" colspan="4">@lang('mpcs::lang.grand_total')</td>
-                                        <td class="text-red text-bold text-right" id="grand_9c_total"></td>
-                                        <td  colspan="5"></td>
-                                    </tr>
-                                    
-                                     
-                                </tfoot>
+                                                <tr>
+                                                    <td class="text-red text-bold" colspan="5">@lang('mpcs::lang.total_this_page')</td>
+                                                    <td class="text-red text-bold text-right" id="footer_9c_total"></td>
+                                                    <td  colspan="5"></td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-red text-bold" colspan="5">@lang('mpcs::lang.total_previous_page')
+                                                    </td>
+                                                    <td class="text-red text-bold text-right" id="pre_9c_total">
+                                                        </td>
+                                                    <td  colspan="5"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-red text-bold" colspan="5">@lang('mpcs::lang.grand_total')</td>
+                                                    <td class="text-red text-bold text-right" id="grand_9c_total"></td>
+                                                    <td  colspan="5"></td>
+                                                </tr>
+                                                
+                                                
+                                            </tfoot>
                                         </table>
                                     </div>
                                     <table width="100%" style="margin-top: 20px;" class="no-border-table">

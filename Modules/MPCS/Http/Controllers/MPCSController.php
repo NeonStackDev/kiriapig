@@ -745,23 +745,26 @@ class MPCSController extends Controller
 
                 if ($setting_start_date && $setting_start_date <= $start_date) {
                     // Get cash sales
-                   
-                    $cash_sales_today = DB::table('transactions')
-                        ->join('transaction_sell_lines', 'transactions.id', '=', 'transaction_sell_lines.transaction_id')
-                        ->join('products', 'transaction_sell_lines.product_id', '=', 'products.id')
-                        ->join('account_transactions', 'transactions.id', '=', 'account_transactions.transaction_id')
-                        ->leftJoin('transaction_payments', 'transactions.id', '=', 'transaction_payments.transaction_id')
-                        ->where('account_transactions.business_id', $business_id)
-                        ->where('transactions.is_credit_sale', 0)
+
+                    $cash_sales_today = Transaction::leftjoin('settlement_credit_sale_payments', 'transactions.credit_sale_id', 'settlement_credit_sale_payments.id')
+                        ->leftjoin('products', 'settlement_credit_sale_payments.product_id', 'products.id')
+                        ->leftjoin('variations', 'products.id', 'variations.product_id')
+                        ->leftjoin('contacts', 'settlement_credit_sale_payments.customer_id', 'contacts.id')
+                        ->leftjoin('business', 'transactions.business_id', 'business.id')
+                        ->leftjoin('business_locations', 'transactions.location_id', 'business_locations.id')
+                        ->leftjoin('settlements', 'settlement_credit_sale_payments.settlement_no', 'settlements.id')
+                        ->where('transactions.is_credit_sale', true)
+                        ->where('settlement_credit_sale_payments.business_id', $business_id)
                         ->whereDate('transactions.transaction_date', '>=', $start_date)
                         ->whereDate('transactions.transaction_date', '<=', $end_date)
                         ->select(
                             'products.name as product',
-                            'transactions.invoice_no as billno',
-                            'transaction_sell_lines.quantity as quantity',
+                            'transactions.invoice_no as ourref',
+                            'settlement_credit_sale_payments.id as billno',
+                            'settlement_credit_sale_payments.qty as quantity',
                             'transactions.final_total as final_total_rs',
                         )
-                        ->groupBy('products.name', 'transactions.invoice_no', 'transaction_sell_lines.quantity', 'transactions.final_total')
+                        ->groupBy('products.name', 'transactions.invoice_no', 'settlement_credit_sale_payments.qty', 'transactions.final_total')
                         ->get();
 
                 } else {

@@ -152,8 +152,8 @@
                     alert("Please select both start and end dates.");
                 }
             });
- //form 9a list
- form_9ccredit_table = $('#form_9ccredit_table').DataTable({
+            //form 9a list
+            form_9ccredit_table = $('#form_9ccredit_table').DataTable({
                 processing: true,
                 serverSide: true,
                 paging: false,
@@ -173,6 +173,10 @@
                     {
                         data: 'billno',
                         name: 'billno'
+                    },
+                    {
+                        data: 'ourref',
+                        name: 'ourref'
                     },
                     {
                         data: 'product',
