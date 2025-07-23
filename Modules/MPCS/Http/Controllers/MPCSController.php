@@ -564,9 +564,9 @@ class MPCSController extends Controller
                 if ($purchase) {
                     foreach ($purchase->purchase_lines as $line) {
                         // Add null checks for variations
-                       
-                        $dpp_inc_tax = optional($line->variations)->dpp_inc_tax ?? 0;
-                        $sell_price_inc_tax = optional($line->variations)->sell_price_inc_tax ?? 0;
+
+                        $dpp_inc_tax = optional($line->variation)->dpp_inc_tax ?? 0;
+                        $sell_price_inc_tax = optional($line->variation)->sell_price_inc_tax ?? 0;
                         
                         $rows[] = [
                             'index_no' => $purchase->order_no,
@@ -589,6 +589,7 @@ class MPCSController extends Controller
                     }
                 }
             }
+
             //             $data=$rows->toArray();
             // \Log::info("F16 settings{$data}");
             return Datatables::of(collect($rows))

@@ -44,7 +44,7 @@
 <link rel="stylesheet" href="{{ asset('plugins/jquery-ui/jquery-ui.min.css?v='.$asset_v) }}">
 
 {{-- fonts --}}
-<link rel="stylesheet" href="{{url('public/fonts/google-fonts/google-fonts.css')}}">
+<link rel="stylesheet" href="{{url('fonts/google-fonts/google-fonts.css')}}">
 <!-- Ionicons -->
 <link rel="stylesheet" href="{{ asset('plugins/ionicons/css/ionicons.min.css?v='.$asset_v) }}">
  <!-- Select2 -->

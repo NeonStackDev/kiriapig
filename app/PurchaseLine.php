@@ -45,6 +45,11 @@ class PurchaseLine extends Model
     {
         return $this->belongsTo(\App\VariationPrice::class, 'variation_id');
     }
+    
+    public function variation()
+    {
+        return $this->belongsTo(\App\Variation::class, 'variation_id');
+    }
 
     /**
      * Set the quantity.

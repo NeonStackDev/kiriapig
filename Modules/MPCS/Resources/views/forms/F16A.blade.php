@@ -322,24 +322,24 @@
 
         // Functions outside document ready are fine
         function get_previous_value_16a() {
-            const dateRange = $('#form_16a_date').val();
-              const singleDate = moment(dateRange, 'YYYY-MM-DD').format('YYYY-MM-DD');
-//             var selectedDate = $('#form_16a_date').datepicker('getDate');
-           
-//             if (selectedDate) {
-//                 var formattedDate = selectedDate.getFullYear() + '-' +
-//                     ('0' + (selectedDate.getMonth() + 1)).slice(-2) + '-' +
-//                     ('0' + selectedDate.getDate()).slice(-2);
-//             }
-//  console.log("date",formattedDate);
+            
+            var selectedDate = $('#form_16a_date').datepicker('getDate');
+            if (selectedDate) {
+                var formattedDate = selectedDate.getFullYear() + '-' +
+                    ('0' + (selectedDate.getMonth() + 1)).slice(-2) + '-' +
+                    ('0' + selectedDate.getDate()).slice(-2);
+            }
+            else {
+                var formattedDate = moment().format('YYYY-MM-DD');
+            }
             var location_id = $('#16a_location_id').val();
 
             $.ajax({
                 method: 'GET',
                 url: '/mpcs/get_previous_value_16a',
                 data: {
-                    start_date: singleDate,
-                    end_date: singleDate,
+                    start_date: formattedDate,
+                    end_date: formattedDate,
                     location_id: location_id
                 },
                 success: function(result) {
@@ -425,7 +425,7 @@
                     name: 'stock_book_no'
                 },
             ],
-            fnDrawCallback: function(oSettings) {
+            drawCallback: function(oSettings) {
                 // Handle the pagination update and update form numbers
                 let pageInfo = form_16a_table.page.info(); // Get pagination info
                 let pageNumber = pageInfo.page + 1; // Get the current page number (1-based)
@@ -445,6 +445,7 @@
                 }
                 caculateF16AFromTotal();
                 get_previous_value_16a();
+                
             },
         });
 

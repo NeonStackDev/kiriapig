@@ -43,14 +43,14 @@
 
     <!-- CSS files -->
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('frontend/css/tailwind.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('frontend/css/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/sweetalert.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/fontawesome.min.css') }}"/>
-    <script type="text/javascript" src="{{ asset('js/alpine.min.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('js/jquery.min.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('frontend/js/main.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('js/sweetalert.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ asset('public/frontend/css/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/frontend/css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/css/sweetalert.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/css/fontawesome.min.css') }}"/>
+    <script type="text/javascript" src="{{ asset('public/js/alpine.min.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('public/js/jquery.min.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('public/frontend/js/main.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('public/js/sweetalert.min.js') }}"></script>
     @if (isset($setting) && $setting)
     <!-- Global site tag (gtag.js) - Google Analytics -->
     
@@ -77,8 +77,8 @@
     @endif
 
     <!-- Smooth Scroll -->
-    <script type="text/javascript" src="{{ asset('js/smooth-scroll.polyfills.min.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('frontend/js/footer.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('public/js/smooth-scroll.polyfills.min.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('public/frontend/js/footer.js') }}"></script>
 
     @if (isset($setting) && $setting)
         
