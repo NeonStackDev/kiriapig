@@ -318,7 +318,7 @@
 
         // Functions outside document ready are fine
         function get_previous_value_16a() {
-            var selectedDate = $('#form_16a_date').datepicker('getDate');
+            var selectedDate = $('#form_16a_date').val();//datepicker('getDate');
             if (selectedDate) {
                 var formattedDate = selectedDate.getFullYear() + '-' +
                     ('0' + (selectedDate.getMonth() + 1)).slice(-2) + '-' +

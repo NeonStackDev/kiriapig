@@ -23,7 +23,7 @@
                        
                             {{-- Single text input that triggers the dropdown --}}
                             {!! Form::text('form_16a_date', @format_date(date('Y-m-d')), [
-                                'class' => 'form-control dropdown-toggle input_number customer_transaction_date',
+                                'class' => 'form-control input_number customer_transaction_date',
                                 'id' => 'form_16a_date',
                               
                                 'readonly',
