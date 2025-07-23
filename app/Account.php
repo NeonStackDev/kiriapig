@@ -15,7 +15,7 @@ class Account extends Model
     use SoftDeletes;
 
     use LogsActivity;
-
+     //
     protected static $logAttributes = ['*'];
 
     protected static $logFillable = true;
